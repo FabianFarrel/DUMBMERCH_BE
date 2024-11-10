@@ -1,77 +1,37 @@
-import jwt from 'jsonwebtoken';
 import { Server, Socket } from "socket.io";
-import { PrismaClient, Role } from "@prisma/client";
+import * as chatService from "../services/chatService";
 
-const prisma = new PrismaClient();
-const SECRET_KEY = process.env.JWT_SECRET || "your_jwt_secret_key";
-const ADMIN_ID = "2";
-const connectedAdmins: Map<string, Socket> = new Map();
-const connectedUsers: Map<string, Socket> = new Map();
+export const socketHandler = (socket: Socket, io: Server) => {
+  console.log(socket.id + " connected");
 
-export const socketHandler = async (socket: Socket, io: Server) => {
-   console.log(`${socket.id} attempting to connect`);
+  socket.on("join room", async (roomId: string) => {
+    socket.join(roomId);
+    console.log(`Socket ${socket.id} joined room ${roomId}`);
 
-   const authHeader = socket.handshake.headers.authorization;
-   const token = authHeader && authHeader.split(' ')[1]; 
+    socket.to(roomId).emit("user joined", socket.id);
+  });
 
-   if (!token) {
-      console.log("Token not found, disconnecting socket");
-      socket.disconnect();
-      return;
-   }
+  socket.on(
+    "chat message",
+    async (data: { content: string; roomId: string; userId: number }) => {
+      const { content, roomId, userId } = data;
 
-   try {
-      const decoded = jwt.verify(token, SECRET_KEY) as { userId: number; role: Role };
-      const { userId, role } = decoded;
+      try {
+        const savedMessage = await chatService.sendMessage(
+          userId,
+          +roomId,
+          content
+        );
 
-      if (role === "ADMIN") {
-         connectedAdmins.set(userId.toString(), socket);
-         joinAdminToUserRooms(socket, io);
-         console.log(`Admin ${userId} connected and joined user rooms`);
-      } else if (role === "USER") {
-         connectedUsers.set(userId.toString(), socket);
-         joinUserRoom(socket, userId.toString());
-         console.log(`User ${userId} joined room ${userId}${ADMIN_ID}`);
-      } else {
-         console.log("Unknown role, disconnecting socket");
-         socket.disconnect();
+        io.to(roomId).emit("chat message", savedMessage);
+      } catch (error) {
+        console.log("Error sending message:", error);
+        socket.emit("error", { message: "Failed to send message" });
       }
+    }
+  );
 
-      socket.on("chat message", (data: { message: string; roomId: string }) => {
-         io.to(data.roomId).emit("chat message", { 
-            message: data.message, 
-            senderId: userId, 
-            timestamp: new Date().toISOString() 
-         });
-      });
-
-      socket.on("disconnect", () => {
-         console.log(`${socket.id} disconnected`);
-         connectedAdmins.delete(userId.toString());
-         connectedUsers.delete(userId.toString());
-      });
-
-   } catch (err) {
-      console.log("Invalid token, disconnecting socket");
-      socket.disconnect();
-   }
+  socket.on("disconnect", () => {
+    console.log(socket.id + " disconnected");
+  });
 };
-
-function joinUserRoom(socket: Socket, userId: string) {
-   const roomName = `${userId}${ADMIN_ID}`;
-   socket.join(roomName);
-   socket.emit("connected", { room: roomName });
-
-   const adminSocket = connectedAdmins.get(ADMIN_ID);
-   if (adminSocket) {
-      adminSocket.join(roomName);
-   }
-}
-
-function joinAdminToUserRooms(adminSocket: Socket, io: Server) {
-   connectedUsers.forEach((userSocket, userId) => {
-      const roomName = `${userId}${ADMIN_ID}`;
-      adminSocket.join(roomName);
-   });
-   adminSocket.emit("connected", { rooms: Array.from(connectedUsers.keys()) });
-}

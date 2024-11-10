@@ -5,8 +5,12 @@ import upload from "../middlewares/uploadFile";
 
 const profileRouter = Router();
 
-profileRouter.put('/update', authentication, upload.single('image'), profileController.updateProfile);
-profileRouter.get('/me', authentication, profileController.getProfile);
+profileRouter.put(
+  "/update",
+  authentication,
+  upload.single("image"),
+  profileController.updateProfile
+);
+profileRouter.get("/me", authentication, profileController.getProfile);
 
-
-export default profileRouter;   
+export default profileRouter;

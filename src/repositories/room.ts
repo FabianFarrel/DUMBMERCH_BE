@@ -11,32 +11,12 @@ export const getOrCreateRoom = async (userId: number, adminId: number) => {
         ],
       },
       include: {
-        users: {
-          select: {
-            role: true, // Make sure to include role
-            profile: {
-              select: {
-                id: true,
-                fullname: true,
-                address: true,
-                gender: true,
-                phone: true,
-                image: true,
-              },
-            },
-          },
-        },
+        users: true,
         messages: true,
       },
     });
 
     if (room) {
-      // Merge role into profile for each user
-      room.users = room.users.map((user) => ({
-        role: user.role,
-        profile: user.profile,
-      }));
-
       console.log("Room found:", room);
       return room;
     }
@@ -49,30 +29,10 @@ export const getOrCreateRoom = async (userId: number, adminId: number) => {
         },
       },
       include: {
-        users: {
-          select: {
-            role: true, // Include role
-            profile: {
-              select: {
-                id: true,
-                fullname: true,
-                address: true,
-                gender: true,
-                phone: true,
-                image: true,
-              },
-            },
-          },
-        },
+        users: true,
         messages: true,
       },
     });
-
-    // Merge role into profile for each user
-    newRoom.users = newRoom.users.map((user) => ({
-      role: user.role,
-      profile: user.profile,
-    }));
 
     console.log("Room created:", newRoom);
     return newRoom;

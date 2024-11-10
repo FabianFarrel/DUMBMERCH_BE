@@ -1,10 +1,10 @@
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient } from "@prisma/client";
 
 const prisma = new PrismaClient();
 
 export const TransactionRepository = {
   getAllTransactions: async () => {
-    return await prisma.transactions.findMany({
+    return await prisma.transaction.findMany({
       include: {
         user: {
           select: {
@@ -13,23 +13,14 @@ export const TransactionRepository = {
             email: true,
           },
         },
-        cart: {
+        transactionItems: {
           include: {
-            cartItems: {
-              include: {
-                product: {
-                  select: {
-                    productName: true,
-                    price: true,
-                  },
-                },
-              },
-            },
+            product: true,
           },
         },
       },
       orderBy: {
-        createdAt: 'desc',
+        createdAt: "desc",
       },
     });
   },

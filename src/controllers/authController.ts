@@ -1,6 +1,6 @@
-import { NextFunction, Request, Response } from 'express';
-import * as authServices from '../services/authService';
-import { LoginDto, RegisterDto } from '../dtos/auth-dto';
+import { NextFunction, Request, Response } from "express";
+import * as authServices from "../services/authService";
+import { LoginDto, RegisterDto } from "../dtos/auth-dto";
 
 export async function login(req: Request, res: Response, next: NextFunction) {
   try {
@@ -24,7 +24,11 @@ export const register = async (req: Request, res: Response) => {
   }
 };
 
-export const authCheck = async (req: Request, res: Response, next: NextFunction) => {
+export const authCheck = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
   try {
     const user = res.locals.user;
     res.json({ user });
